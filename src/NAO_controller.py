@@ -28,6 +28,8 @@ class Controller():
         self.motion = NAO_motion.Motion(logger, config)
         self.sensor = NAO_sensor.Sensor(logger, config)
         self.speech = config.getProxy("ALTextToSpeech")
+        self.memory = config.getProxy("ALMemory")
+
         
         #How close Nao will try to get to the ball in meters(>0.25)
         self.distanceToTarget = 0.27
@@ -57,12 +59,17 @@ class Controller():
             return 1
         
         self.logger.info("Controller: Starting...")
+
+        try:
+            self.sensor.removeBallData()
+        except:
+            self.logger.info("No Ball Data")
         
         self.motion.getBehaviors()
         #The maximum volume of text-to-speech outputs
         self.speech.setVolume(0.5) 
         
-        self.speech.say("Standing up")
+        #self.speech.say("Standing up")
         self.motion.standUp()
         
         # We need to close the hands here, because Nao sometimes opens them after standing up
@@ -80,76 +87,78 @@ class Controller():
     # Return: 1 if its stopped
     ###    
         
-        if (self.isStop):
-            self.end()
-            return 1
+        # if (self.isStop):
+        #     self.end()
+        #     return 1
         
         
-        self.speech.say("Looking short")
+        #self.speech.say("Looking for my ball")
         # activate camera, 0top 1bottom
         self.sensor.setCamera(1)
         self.sensor.subscribeToRedball()
 
         #Look for the ball straight ahead
-        
-        if(self.firstIteration):
-            time.sleep(2)
-            self.firstIteration = False
+        while True:
+            if(self.firstIteration):
+                time.sleep(2)
+                self.firstIteration = False
 
-        if (self.sensor.isNewBall()):
-            # New Ball found
-            self.ballFound()
-            return 1
-        #Look for the ball on the left
-        self.motion.turnHead(30, 0.5) 
-        time.sleep(self.retardSecond)
-        if(self.sensor.isNewBall()):
-            #New Ball found          
-            self.motion.turnAround(30)
-            self.ballFound()
-            return 1
-        
-        #Look for the ball on the right       
-        self.motion.turnHead(-30, 0.5)     
-        time.sleep(self.retardSecond)
-        if(self.sensor.isNewBall()):
-            #New Ball found   
-            self.motion.turnAround(-30)
-            self.ballFound()
-            return 1
+            ballFound = self.sensor.isNewBall()
+            if (ballFound):
+                # New Ball found
+                # self.ballFound()
+                self.logger.info("Ball Found")
+                self.ballFound()
+            else:
+                self.logger.info("No Ball Found, Turning")
+                self.motion.turnAround(40)
+            #Look for the ball on the left
+            # self.motion.turnHead(30, 0.5) 
+            # time.sleep(self.retardSecond)
+            # if(self.sensor.isNewBall()):
+            #     #New Ball found          
+            #     self.motion.turnAround(30)
+            #     # self.ballFound()
+            #     return True
+            
+            #Look for the ball on the right       
+            # self.motion.turnHead(-30, 0.5)     
+            # time.sleep(self.retardSecond)
+            
+            # if(self.sensor.isNewBall()):
+            #     #New Ball found   
+            #     self.motion.turnAround(-30)
+            #     # self.ballFound()
+            #     return True
 
 
-        #"Could not find my ball" message    
-        self.speech.say("Could not find my ball")
-        self.sensor.unsubscribeToRedBall()
-        
-        if(self.rotations != 5):
-            #Recursion
-            # moving head
-            self.motion.turnHead(0, 0.1)
-            # moving body
-            self.motion.turnAround(60)
-            # rotating robot
-            self.rotations = self.rotations + 1
-            self.lookForBallCloseRange()
-        else:
-            self.end()
+            #"Could not find my ball" message    
+            # self.speech.say("Could not find my ball")
+            # self.sensor.unsubscribeToRedBall()
+            
+            # if(self.rotations != 5):
+            #     #Recursion
+            #     # moving head
+            #     self.motion.turnHead(0, 0.1)
+            #     # moving body
+            #     self.motion.turnAround(60)
+            #     # rotating robot
+            #     self.rotations = self.rotations + 1
+            #     self.lookForBallCloseRange()
         
             
-            
+    
     def ballFound(self):    
     ###
     # Summary: Called when the ball has been found
     # Parameters: self
     # Return: 1 if it s stopped
     ###    
-        
-        if (self.isStop):
-            self.end()
-            return 1
-        
-        #"I found my ball" message 
-        self.speech.say("I found my ball")
+    
+        #"I found my ball" message
+    
+        #self.speech.say("I found my ball")
+        self.firstIteration = False
         
         self.rotations = 0
         # move head
@@ -165,109 +174,108 @@ class Controller():
     # Parameters: self
     # Return: 1 if it s stopped
     ###        
-        
-        if (self.isStop):
-            self.end()
-            return 1
 
         #"Looking at my ball" message 
-        self.speech.say("Looking at my ball")
+        # ballLost = 0
+        # atBall = False
         
-        ballLost = 0
-        atBall = False
-        
-        #Starting the sensors 
+        # #Starting the sensors 
         self.sensor.startHeadTracker()
-        self.sensor.startSonar()
+        # self.sensor.startSonar()
         
-        while(atBall == False):
-            if (self.isStop):
-                self.sensor.stopHeadTracker()
-                self.sensor.stopSonar()
-                self.end()
-                return 1
+        # while(atBall == False):
+        #     if (self.isStop):
+        #         self.sensor.stopHeadTracker()
+        #         self.sensor.stopSonar()
+        #         self.end()
+        #         return 1
             
-            time.sleep(self.walkIterationTime)
+        #     time.sleep(self.walkIterationTime)
             
-            headAngle = self.motion.getSensorValue("HeadYaw")[0]
+        #     headAngle = self.motion.getSensorValue("HeadYaw")[0]
             
-            #Check whether or not we are looking at our own shoulders
-            if(headAngle < - 0.75 or headAngle > 0.75):
-                self.logger.info("HeadYaw: " + str(headAngle))
-                self.sensor.stopHeadTracker()
-                self.motion.turnHead(0.0, 0.5)
-                self.sensor.startHeadTracker()
+        #     #Check whether or not we are looking at our own shoulders
+        #     if(headAngle < - 0.75 or headAngle > 0.75):
+        #         self.logger.info("HeadYaw: " + str(headAngle))
+        #         self.sensor.stopHeadTracker()
+        #         self.motion.turnHead(0.0, 0.5)
+        #         self.sensor.startHeadTracker()
             
-            # get the ball position
-            x = self.sensor.getBallPosition()[0]
-            y = self.sensor.getBallPosition()[1]
+        #     # get the ball position
+        #     coord = self.sensor.getBallPosition()
+        #     self.logger.info(str(coord))
+            # while len(coord) == 0:
+            #     coord = self.sensor.getBallPosition()
+            # x = coord[0]
+            # y = coord[1]
             
-            self.distance = math.sqrt(math.pow(x,2)+math.pow(y,2))
-            angle = math.atan2(y, x)
-            angleRounded = int(angle/(5.0*motion.TO_RAD))*(5.0*motion.TO_RAD)
+            # self.distance = math.sqrt(math.pow(x,2)+math.pow(y,2))
+            # angle = math.atan2(y, x)
+            # angleRounded = int(angle/(5.0*motion.TO_RAD))*(5.0*motion.TO_RAD)
             
-            #The walking velocity angle must be between -1 and 1
-            if(angleRounded>1):
-                angleRounded = 1
-            if(angleRounded<-1):
-                angleRounded = -1
+            # #The walking velocity angle must be between -1 and 1
+            # if(angleRounded>1):
+            #     angleRounded = 1
+            # if(angleRounded<-1):
+            #     angleRounded = -1
             
-            self.logger.info("Ball at: " + str(x) + "," + str(y) + " with " + str(angleRounded) + " in " + str(self.distance))
+            # self.logger.info("Ball at: " + str(x) + "," + str(y) + " with " + str(angleRounded) + " in " + str(self.distance))
             
-            #Reducing the speed the closer we get to the ball
-            speed = self.walkingSpeed
-            if(self.distance <= self.walkingSpeed):
-                speed = self.distance   
+            # #Reducing the speed the closer we get to the ball
+            # speed = self.walkingSpeed
+            # if(self.distance <= self.walkingSpeed):
+            #     speed = self.distance   
             
-            #Actual walking call (non blocking and iterated)
-            self.motion.setWalkTargetVelocity(1.0, 0.0, angleRounded, speed)
+            # #Actual walking call (non blocking and iterated)
+            # self.motion.setWalkTargetVelocity(1.0, 0.0, angleRounded, speed)
             
-            #Checking if the ball is still visible
-            if(self.sensor.isNewBall() == False):
-                ballLost = ballLost + 1
-                self.logger.info("Ball lost?")
-            else:
-                ballLost = 0
+            # #Checking if the ball is still visible
+            # if(self.sensor.isNewBall() == False):
+            #     ballLost = ballLost + 1
+            #     self.logger.info("Ball lost?")
+            # else:
+            #     ballLost = 0
                 
-            #Collision detection and reaction
-            self.colLeft = False
-            self.colRight = False
+            # #Collision detection and reaction
+            # self.colLeft = False
+            # self.colRight = False
             
-            if(self.sensor.getSonarLeft() <= self.maxSonar):
-                self.colLeft = True
+            # if(self.sensor.getSonarLeft() <= self.maxSonar):
+            #     self.colLeft = True
                 
-            if(self.sensor.getSonarRight() <= self.maxSonar):
-                self.colRight = True
+            # if(self.sensor.getSonarRight() <= self.maxSonar):
+            #     self.colRight = True
                 
-            self.tooClose(self.colLeft, self.colRight)
+            # self.tooClose(self.colLeft, self.colRight)
                 
-            #If we lost sight of the ball a certain amount  
-            if(ballLost >= self.ballLostMax):
-                self.speech.say("I lost track of my ball")
-                atBall = True
-                self.motion.stopEverything()
-                self.sensor.stopHeadTracker()
-                self.sensor.stopSonar()
-                self.motion.standUp()
-                self.lookForBallCloseRange()
-                return 1
+            # #If we lost sight of the ball a certain amount  
+            # if(ballLost >= self.ballLostMax):
+            #     self.speech.say("I lost track of my ball")
+            #     atBall = True
+            #     self.motion.stopEverything()
+            #     self.sensor.stopHeadTracker()
+            #     self.sensor.stopSonar()
+            #     self.motion.standUp()
+            #     self.lookForBallCloseRange()
+            #     return 1
             
-            #If we reached our target distance
-            if(self.distance <= self.distanceToTarget):
-                self.logger.info("At my Target")
-                self.motion.stopEverything()
-                self.sensor.stopHeadTracker()
-                atBall = True
+            # #If we reached our target distance
+            # if(self.distance <= self.distanceToTarget):
+            #     self.logger.info("At my Target")
+            #     self.motion.stopEverything()
+            #     self.sensor.stopHeadTracker()
+            #     atBall = True
                 
-                self.motion.standUp()
+            #     self.motion.standUp()
         
-                self.speech.say("Final correction")
-                self.motion.turnAround(math.degrees(angle))
+            #     self.speech.say("Final correction")
+            #     self.motion.turnAround(math.degrees(angle))
                 
-                self.sensor.stopSonar()
-                self.findGoal()
-                return 1        
-                
+            #     self.sensor.stopSonar()
+            #     self.findGoal()
+            #     return 1        
+    
+
     def pickUpBall(self):    
     ###
     # Summary: Picking up the ball
@@ -371,8 +379,13 @@ class Controller():
             time.sleep(1)
             
             # calculate the position of the ball
-            x = self.sensor.getBallPosition()[0]
-            y = self.sensor.getBallPosition()[1]
+            try:
+                coord = self.sensor.getBallPosition()
+                x = coord[0]
+                y = coord[1]
+            except:
+                print(coord)
+                exit()
             ballDistance = math.sqrt(math.pow(x,2)+math.pow(y,2))
             
             # write into log file the position of the ball
@@ -437,8 +450,13 @@ class Controller():
             time.sleep(1)
             
             # get info about position of the ball
-            x = self.sensor.getBallPosition()[0]
-            y = self.sensor.getBallPosition()[1]
+            try:
+                coord = self.sensor.getBallPosition()
+                x = coord[0]
+                y = coord[1]
+            except:
+                print(coord)
+                exit()
             
             # stopping head tracking
             self.sensor.stopHeadTracker()

@@ -20,7 +20,7 @@ class Sensor:
         # asign the proxys to the variables
         self.logger = logger
         self.config = config
-        self.redBallTracker = self.config.getProxy("ALRedBallTracker")
+        self.tracker = self.config.getProxy("ALTracker")
         self.redBallDetection = self.config.getProxy("ALRedBallDetection")
         self.video = self.config.getProxy("ALVideoDevice")
         self.memory = self.config.getProxy("ALMemory")
@@ -39,7 +39,7 @@ class Sensor:
         # Parameters: self
         # Return: position of the ball
         ###
-        return self.redBallTracker.getPosition()
+        return self.tracker.getTargetPosition()
 
     def getBallData(self):
         ###
@@ -48,6 +48,8 @@ class Sensor:
         # Return: data about the detected red ball
         ###
         return self.memory.getData("redBallDetected", 0)[1]
+    
+    
 
     def getTimeBallData(self):
         ###
@@ -57,14 +59,18 @@ class Sensor:
         # Return: data in case we have information or 0 in case we don t have
         ###
         # load data from reBallDetected into data
-        data = self.memory.getData("redBallDetected", 0)
-        # if there is data
-        if (data):
-            # return data
-            return data[0]
-        else:
-            # return 0
+        try:
+            data = self.memory.getData("redBallDetected", 0)
+            # if there is data
+            if (data):
+                # return data
+                return data[0]
+            else:
+                # return 0
+                return 0
+        except:
             return 0
+        
 
     def getHeadAngle(self):
         ###
@@ -101,6 +107,7 @@ class Sensor:
         ###
         # get moment of last time Nao got data of the ball
         data = self.getTimeBallData()
+        self.logger.info(str(data))
         # if there is no data
         if (data == 0):
             return False
@@ -143,10 +150,18 @@ class Sensor:
         # Parameters: self
         # Return: --
         ###
-
-        self.redBallTracker.setWholeBodyOn(False)
         # start tracking for the red ball
-        self.redBallTracker.startTracker()
+        self.tracker.registerTarget("RedBall", .06)
+        self.tracker.setRelativePosition([.01,.00,.01,.125,.2,.01])
+        self.tracker.setMode("Move")
+
+        self.logger.info("Starting Tracker")
+        while True:
+            self.tracker.track("RedBall")
+            coord = self.tracker.getTargetPosition(2)
+            self.logger.info(str(coord))
+        self.logger.info("EndedTracker")
+        
 
     def stopHeadTracker(self):
         ###
@@ -154,9 +169,8 @@ class Sensor:
         # Parameters:
         # Return:
         ###
-        self.redBallTracker.setWholeBodyOn(False)
         # stop red ball tracking
-        self.redBallTracker.stopTracker()
+        self.tracker.stopTracker()
 
     def subscribeToRedball(self):
         ###

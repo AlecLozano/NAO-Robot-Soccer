@@ -126,7 +126,7 @@ class Motion:
         # execute the method wakeup that make Nao to stand up
         self.motion.wakeUp()
         # take Nao from waking up posture to the indicated StandInit posture
-        self.posture.goToPosture("StandInit", 0.7)
+        self.posture.goToPosture("Stand", 0.5)
 
     def rest(self):
         ###
@@ -161,7 +161,7 @@ class Motion:
         # if head is between these degrees, then Nao can move its head
         if ((degree >= -118) & (degree <= 118)):
             self.motion.angleInterpolation(
-                ["HeadYaw"],
+                ["HeadPitch"],
                 [math.radians(degree)],
                 [time],
                 True

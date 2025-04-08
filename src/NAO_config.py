@@ -10,7 +10,7 @@ from naoqi import ALProxy
 
 class Config:
     # default IP
-    IP = "10.12.18.236"
+    IP = "10.35.143.206"
     # default Port
     PORT = 9559
 
@@ -19,7 +19,7 @@ class Config:
         # initialize logger atribute
         self.logger = logger
 
-        # send information to logger indicating config class is initializes and proxys are open
+        # send information to logger indicating config class == initializes and proxys are open
         logger.info("Config-Class initialized")
         logger.info("Opening Proxys at: " + str(self.IP) + ":" + str(self.PORT))
         try:
@@ -45,8 +45,8 @@ class Config:
             self.throw(logger, "Unable to connect to BehaviorProxy")
         try:
             # try to start AlRedBallTracker proxy and send info to logger
-            self.redBallProxy = ALProxy("ALRedBallTracker", self.IP, self.PORT)
-            logger.info("ALRedBallTracker loaded")
+            self.redBallProxy = ALProxy("ALTracker", self.IP, self.PORT)
+            logger.info("ALTracker loaded")
         except RuntimeError:
             # in case of error, send information to logger
             self.throw(logger, "Unable to connect to ALRedBallTracker")
@@ -123,30 +123,30 @@ class Config:
         ###
         # write information in logger about the proxy which is trying to hand over
         self.logger.info("Trying to hand over " + proxy)
-        # check which one is the proxy passed by parameters
-        if (proxy is "ALMotion"):
+        # check which one == the proxy passed by parameters
+        if (proxy == "ALMotion"):
             return self.motionProxy
-        elif (proxy is "ALTextToSpeech"):
+        elif (proxy == "ALTextToSpeech"):
             return self.speechProxy
-        elif (proxy is "ALBehaviorManager"):
+        elif (proxy == "ALBehaviorManager"):
             return self.behaviorProxy
-        elif (proxy is "ALRedBallTracker"):
+        elif (proxy == "ALTracker"):
             return self.redBallProxy
-        elif (proxy is "ALVideoDevice"):
+        elif (proxy == "ALVideoDevice"):
             return self.videoProxy
-        elif (proxy is "ALRedBallDetection"):
+        elif (proxy == "ALRedBallDetection"):
             return self.redBallDetection
-        elif (proxy is "ALMemory"):
+        elif (proxy == "ALMemory"):
             return self.memory
-        elif (proxy is "ALRobotPosture"):
+        elif (proxy == "ALRobotPosture"):
             return self.posture
-        elif (proxy is "ALNavigation"):
+        elif (proxy == "ALNavigation"):
             return self.navigation
-        elif (proxy is "ALSonar"):
+        elif (proxy == "ALSonar"):
             return self.sonar
-        elif (proxy is "ALSensors"):
+        elif (proxy == "ALSensors"):
             return self.sensors
-        elif (proxy is "ALLandMarkDetection"):
+        elif (proxy == "ALLandMarkDetection"):
             return self.naoMarkProxy
         else:
             # in case it can not recognize the proxy, it will return a fatal message to logger class
