@@ -29,6 +29,7 @@ class Controller():
         self.sensor = NAO_sensor.Sensor(logger, config)
         self.speech = config.getProxy("ALTextToSpeech")
         self.memory = config.getProxy("ALMemory")
+        self.posture = config.getProxy("ALRobotPosture")
 
         
         #How close Nao will try to get to the ball in meters(>0.25)
@@ -157,14 +158,15 @@ class Controller():
     
         #"I found my ball" message
     
-        #self.speech.say("I found my ball")
-        self.firstIteration = False
+        # self.speech.say("I found my ball")
+        # self.firstIteration = False
         
-        self.rotations = 0
+        # self.rotations = 0
         # move head
         self.motion.turnHead(0, 0.5) 
         # Nao walks to ball
         self.walkToBall()
+        
         
 
 
@@ -176,11 +178,14 @@ class Controller():
     ###        
 
         #"Looking at my ball" message 
-        # ballLost = 0
-        # atBall = False
-        
+        ballLost = 0
+        atBall = False
+        while not atBall:
         # #Starting the sensors 
-        self.sensor.startHeadTracker()
+            atBall = self.sensor.startHeadTracker()
+            self.logger.info(str(atBall))
+            if atBall:
+                self.end()   
         # self.sensor.startSonar()
         
         # while(atBall == False):

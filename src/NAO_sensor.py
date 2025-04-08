@@ -80,6 +80,7 @@ class Sensor:
         ###
         return self.motion.getAngles("HeadYaw", True)
 
+
     def isBallInHand(self):
         ###
         # Summary: This will indicate us if the ball is being grabbed by the hand
@@ -152,15 +153,30 @@ class Sensor:
         ###
         # start tracking for the red ball
         self.tracker.registerTarget("RedBall", .06)
-        self.tracker.setRelativePosition([.01,.00,.01,.125,.2,.01])
+        X_axis_Distance = .01
+        Y_axis_Distance = 0
+        Theta = 0
+        Thresh_X = .1255
+        Thresh_Y = .2
+        Thresh_theta = .3
+
+        self.tracker.setRelativePosition([X_axis_Distance, Y_axis_Distance, Theta, Thresh_X, Thresh_Y, Thresh_theta])
         self.tracker.setMode("Move")
 
         self.logger.info("Starting Tracker")
         while True:
             self.tracker.track("RedBall")
-            coord = self.tracker.getTargetPosition(2)
+            coord = self.tracker.getRelativePosition()
             self.logger.info(str(coord))
-        self.logger.info("EndedTracker")
+
+            if(self.tracker.isTargetLost()):
+                self.motion.angleInterpolationWithSpeed("HeadYaw", 0, .8)
+                self.logger.info("Ball Lost :(")
+                return False
+            
+            elif coord[0] > .007 and coord[2] > .121 and coord[3] > .4:
+                self.logger.info("Ball Reached :)")
+                return True
         
 
     def stopHeadTracker(self):
