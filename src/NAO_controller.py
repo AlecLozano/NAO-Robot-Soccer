@@ -31,7 +31,7 @@ class Controller():
         self.memory = config.getProxy("ALMemory")
         self.posture = config.getProxy("ALRobotPosture")
 
-        
+        self.tracker = config.getProxy("ALTracker")
         #How close Nao will try to get to the ball in meters(>0.25)
         self.distanceToTarget = 0.27
         #How many times the ball can be out of sight before Nao stops
@@ -48,6 +48,46 @@ class Controller():
         self.isStop = False
         self.firstIteration = True
         
+    def startHeadTracker(self):
+        ###
+        # Summary: start head tracking of the ball
+        # Parameters: self
+        # Return: --
+        ###
+        # start tracking for the red ball
+
+        self.tracker.registerTarget("RedBall", .06)
+        #self.tracker.setMaximumDistanceDetection(2.0)
+        self.tracker.setTimeOut(3000)
+
+        X_axis_Distance = .01
+        Y_axis_Distance = 0
+        Theta = 0
+        Thresh_X = .1255
+        Thresh_Y = .2
+        Thresh_theta = .3
+
+        self.tracker.setRelativePosition([X_axis_Distance, Y_axis_Distance, Theta, Thresh_X, Thresh_Y, Thresh_theta])
+
+        self.logger.info("Starting Tracker")
+        self.tracker.setMode("Move")
+
+        
+        
+        self.tracker.track("RedBall")
+        status = None
+        time.sleep(5)
+
+        while True:
+
+            if self.sensor.isHeadTouched():
+                return "Head Touched"
+            elif self.tracker.isTargetLost():
+                return "Lost Target"
+            elif not self.motion.isMoving():
+                return "Reached Target"
+
+
     def start(self):       
     ###
     # Summary: start method with general setup calls
@@ -61,16 +101,16 @@ class Controller():
         
         self.logger.info("Controller: Starting...")
 
-        try:
-            self.sensor.removeBallData()
-        except:
-            self.logger.info("No Ball Data")
         
+        self.sensor.removeBallData()
+   
+        #self.motion.addDefaultBehavior("bps_kick/bps_kick")
         self.motion.getBehaviors()
         #The maximum volume of text-to-speech outputs
-        self.speech.setVolume(0.5) 
+        self.speech.setVolume(.8) 
         
         #self.speech.say("Standing up")
+        self.motion.wakeUp()
         self.motion.standUp()
         
         # We need to close the hands here, because Nao sometimes opens them after standing up
@@ -78,8 +118,33 @@ class Controller():
         
         # stop head tracking
         self.sensor.stopHeadTracker()
-                
+        
+        
+        self.sensor.setCamera(1)
+        self.sensor.subscribeToRedball()
+
         self.lookForBallCloseRange()
+        status = self.startHeadTracker()
+
+        while status != "Reached Target":
+            self.tracker.stopTracker()
+            self.sensor.removeBallData()
+            self.lookForBallCloseRange()
+            status = self.startHeadTracker()
+
+
+                
+            #self.logger.info(str(self.sensor.isTargetLost()))
+        self.logger.info(status)
+        self.logger.info("Kicking Ball")
+
+        self.findGoal()
+
+        self.motion.standUp()
+        self.motion.kickBall()
+        self.end()
+        
+
         
     def lookForBallCloseRange(self):
     ###
@@ -87,87 +152,24 @@ class Controller():
     # Parameters: self
     # Return: 1 if its stopped
     ###    
-        
-        # if (self.isStop):
-        #     self.end()
-        #     return 1
-        
-        
-        #self.speech.say("Looking for my ball")
-        # activate camera, 0top 1bottom
-        self.sensor.setCamera(1)
-        self.sensor.subscribeToRedball()
-
-        #Look for the ball straight ahead
-        while True:
-            if(self.firstIteration):
-                time.sleep(2)
-                self.firstIteration = False
-
+        self.logger.info("Searching for Ball")
+        ballFound = False
+        while not ballFound:
+            
+            #Look for ball
             ballFound = self.sensor.isNewBall()
-            if (ballFound):
-                # New Ball found
-                # self.ballFound()
-                self.logger.info("Ball Found")
-                self.ballFound()
-            else:
-                self.logger.info("No Ball Found, Turning")
+            time.sleep(.5)
+
+            # Rotate to look for ball
+            if not ballFound:
+                self.logger.info("Ball Not Found Turning")
                 self.motion.turnAround(40)
-            #Look for the ball on the left
-            # self.motion.turnHead(30, 0.5) 
-            # time.sleep(self.retardSecond)
-            # if(self.sensor.isNewBall()):
-            #     #New Ball found          
-            #     self.motion.turnAround(30)
-            #     # self.ballFound()
-            #     return True
+            else:
+                return ballFound
             
-            #Look for the ball on the right       
-            # self.motion.turnHead(-30, 0.5)     
-            # time.sleep(self.retardSecond)
-            
-            # if(self.sensor.isNewBall()):
-            #     #New Ball found   
-            #     self.motion.turnAround(-30)
-            #     # self.ballFound()
-            #     return True
-
-
-            #"Could not find my ball" message    
-            # self.speech.say("Could not find my ball")
-            # self.sensor.unsubscribeToRedBall()
-            
-            # if(self.rotations != 5):
-            #     #Recursion
-            #     # moving head
-            #     self.motion.turnHead(0, 0.1)
-            #     # moving body
-            #     self.motion.turnAround(60)
-            #     # rotating robot
-            #     self.rotations = self.rotations + 1
-            #     self.lookForBallCloseRange()
-        
-            
-    
-    def ballFound(self):    
-    ###
-    # Summary: Called when the ball has been found
-    # Parameters: self
-    # Return: 1 if it s stopped
-    ###    
-    
-        #"I found my ball" message
-    
-        # self.speech.say("I found my ball")
-        # self.firstIteration = False
-        
-        # self.rotations = 0
-        # move head
-        self.motion.turnHead(0, 0.5) 
-        # Nao walks to ball
-        self.walkToBall()
-        
-        
+            if self.sensor.isHeadTouched():
+                self.end()
+        self.logger.info("Ball Found")
 
 
     def walkToBall(self):
@@ -178,14 +180,17 @@ class Controller():
     ###        
 
         #"Looking at my ball" message 
-        ballLost = 0
         atBall = False
-        while not atBall:
-        # #Starting the sensors 
-            atBall = self.sensor.startHeadTracker()
-            self.logger.info(str(atBall))
-            if atBall:
-                self.end()   
+        
+        status = self.sensor.startHeadTracker()
+        self.logger.info(status)
+
+        if status == "Target Lost":
+            #self.sensor.stopHeadTracker()
+            return status
+        elif status == "Head Touched":
+            #self.sensor.stopHeadTracker()
+            self.end()
         # self.sensor.startSonar()
         
         # while(atBall == False):
@@ -372,6 +377,7 @@ class Controller():
             
         self.speech.say("Could not find the goal")
         self.sensor.unSubscribeFromLandMarks()
+        self.rotations = 0
         
         #Rotation around the ball with a newly calculated distance
         if(self.rotations != 11):
@@ -380,7 +386,8 @@ class Controller():
             self.motion.pitchHead(15, 0.4)
             
             # starting tracking
-            self.sensor.startHeadTracker()
+            self.tracker.setMode("Head")
+            self.tracker.track("RedBall")
             time.sleep(1)
             
             # calculate the position of the ball
@@ -397,7 +404,7 @@ class Controller():
             self.logger.info("Ball distance: " + str(ballDistance))
             
             
-            self.sensor.stopHeadTracker()
+            self.tracker.stopTracker()
             
             # Nao rotates around the ball
             self.motion.rotateAroundBall(ballDistance, 30)
@@ -451,7 +458,7 @@ class Controller():
             self.speech.say("Aiming!")
             
             # Nao starts head tracking
-            self.sensor.startHeadTracker()
+            self.tracker.track("RedBall")
             time.sleep(1)
             
             # get info about position of the ball
@@ -530,3 +537,4 @@ class Controller():
         self.sensor.removeBallData()
         # Nao will be in resting position
         self.motion.rest()
+        exit()

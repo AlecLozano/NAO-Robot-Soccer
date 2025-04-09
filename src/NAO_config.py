@@ -106,6 +106,13 @@ class Config:
         except RuntimeError:
             # in case of error, send information to logger            
             self.throw(logger, "Unable to connect to ALLandMarkDetection")
+        
+        try:
+            # try to start the ALTouch proxy
+            self.touch = ALProxy("ALTouch", self.IP, self.PORT)
+            logger.info("ALTouch Loaded")
+        except RuntimeError:
+            self.throw(logger, "Unable to connect to ALTouch")
 
     def throw(self, logger, message):
         ###
@@ -126,6 +133,8 @@ class Config:
         # check which one == the proxy passed by parameters
         if (proxy == "ALMotion"):
             return self.motionProxy
+        elif (proxy == "ALTouch"):
+            return self.touch
         elif (proxy == "ALTextToSpeech"):
             return self.speechProxy
         elif (proxy == "ALBehaviorManager"):

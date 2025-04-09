@@ -7,6 +7,7 @@
 BALLEVENT = "31273"
 SONAREVENT = "31274"
 LANDMARKEVENT = "31275"
+import time
 
 
 class Sensor:
@@ -20,6 +21,7 @@ class Sensor:
         # asign the proxys to the variables
         self.logger = logger
         self.config = config
+        self.touch = self.config.getProxy("ALTouch")
         self.tracker = self.config.getProxy("ALTracker")
         self.redBallDetection = self.config.getProxy("ALRedBallDetection")
         self.video = self.config.getProxy("ALVideoDevice")
@@ -71,6 +73,12 @@ class Sensor:
         except:
             return 0
         
+    def isHeadTouched(self):
+        headStatus = self.touch.getStatus()[7:10]
+        for sensor in headStatus:
+            if sensor[1]:
+                return True
+        return False
 
     def getHeadAngle(self):
         ###
@@ -108,7 +116,6 @@ class Sensor:
         ###
         # get moment of last time Nao got data of the ball
         data = self.getTimeBallData()
-        self.logger.info(str(data))
         # if there is no data
         if (data == 0):
             return False
@@ -116,21 +123,11 @@ class Sensor:
         # get moment of last time Nao got data of the ball
         timeMillis = self.getTimeBallData()[1]
         # write it on logger
-        self.logger.info("Time for last ball: " + str(timeMillis))
+        #self.logger.info("Time for last ball: " + str(timeMillis))
 
         # if data is not null
         if (data):
-            if (timeMillis <= self.timeMillisOld):
-                # change value of old time Nao saw the ball for new moment
-                self.timeMillisOld = timeMillis
-                # write into logger
-                self.logger.info("Old Ball!")
-                return False
-            else:
-                # change value of old time Nao saw the ball for new moment
-                self.timeMillisOld = timeMillis
-                self.logger.info("New Ball!")
-                return True
+            return True
         else:
             return False
 
@@ -143,40 +140,55 @@ class Sensor:
         # write info into logger
         self.logger.info("Deleting Memory Footprints")
         # remove data about redBallDetected from memory
-        self.memory.removeData("redBallDetected")
+        try:
+            self.memory.removeData("redBallDetected")
+        except:
+            pass
+        finally:
+            self.logger.info("Ball data erased")
 
-    def startHeadTracker(self):
-        ###
-        # Summary: start head tracking of the ball
-        # Parameters: self
-        # Return: --
-        ###
-        # start tracking for the red ball
-        self.tracker.registerTarget("RedBall", .06)
-        X_axis_Distance = .01
-        Y_axis_Distance = 0
-        Theta = 0
-        Thresh_X = .1255
-        Thresh_Y = .2
-        Thresh_theta = .3
+    # def startHeadTracker(self):
+    #     ###
+    #     # Summary: start head tracking of the ball
+    #     # Parameters: self
+    #     # Return: --
+    #     ###
+    #     # start tracking for the red ball
 
-        self.tracker.setRelativePosition([X_axis_Distance, Y_axis_Distance, Theta, Thresh_X, Thresh_Y, Thresh_theta])
-        self.tracker.setMode("Move")
+    #     self.tracker.registerTarget("RedBall", .06)
+    #     #self.tracker.setMaximumDistanceDetection(2.0)
+    #     self.tracker.setTimeOut(9000)
 
-        self.logger.info("Starting Tracker")
-        while True:
-            self.tracker.track("RedBall")
-            coord = self.tracker.getRelativePosition()
-            self.logger.info(str(coord))
+    #     X_axis_Distance = .01
+    #     Y_axis_Distance = 0
+    #     Theta = 0
+    #     Thresh_X = .1255
+    #     Thresh_Y = .2
+    #     Thresh_theta = .3
 
-            if(self.tracker.isTargetLost()):
-                self.motion.angleInterpolationWithSpeed("HeadYaw", 0, .8)
-                self.logger.info("Ball Lost :(")
-                return False
+    #     self.tracker.setRelativePosition([X_axis_Distance, Y_axis_Distance, Theta, Thresh_X, Thresh_Y, Thresh_theta])
+
+    #     self.logger.info("Starting Tracker")
+    #     self.tracker.setMode("Move")
+
+        
+    #     while True:
+    #         self.tracker.track("RedBall")
+    #         self.logger.info(str(self.tracker.isTargetLost()))
+
+    #         if self.isHeadTouched():
+    #             return "Head Touched"
             
-            elif coord[0] > .007 and coord[2] > .121 and coord[3] > .4:
-                self.logger.info("Ball Reached :)")
-                return True
+    #     #self.logger.info(str(coord))
+        
+        # elif coord[0] > .008 and coord[2] > .123 and coord[3] > .28:
+        #     #self.logger.info("Ball Reached :)")
+        #     return "Target Reached"
+        
+        # elif self.isHeadTouched():
+        #     return "Head Touched"
+    def isTargetLost(self):
+        self.tracker.isTargetLost()
         
 
     def stopHeadTracker(self):
@@ -187,6 +199,7 @@ class Sensor:
         ###
         # stop red ball tracking
         self.tracker.stopTracker()
+        #self.removeBallData()
 
     def subscribeToRedball(self):
         ###

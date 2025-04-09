@@ -37,4 +37,8 @@ if __name__ == "__main__":
     config = NAO_config.Config(logger)
 
     controller = NAO_controller.Controller(logger, config)
-    controller.start()
+    try:
+        controller.start()
+    except RuntimeError as e:
+        print(e)
+        controller.end()

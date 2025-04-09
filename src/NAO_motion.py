@@ -47,7 +47,7 @@ class Motion:
             self.logger.info("Finished running Behavior: " + behaviorName)
         else:
             # write a warning message into logger
-            self.logger.warn("Behavior ", + behaviorName + " is not installed")
+            self.logger.warn("Behavior is not installed")
 
     def stop(self):
         ###
@@ -59,6 +59,12 @@ class Motion:
         self.logger.info("Trying to stop the currently running Behavior: " + str(self.motion.getRunningBehaviors))
         # stop all behaviors in execution
         self.motion.stopAllBehaviors()
+    
+    def addDefaultBehavior(self, behavior):
+        if self.behaviorManager.isBehaviorInstalled(behavior):
+            self.logger.warn("Behavior \"" + behavior + "\" is already added")
+        else:
+            self.behaviorManager.addDefaultBehavior(behavior)
 
     def getBehaviors(self):
         ###
@@ -71,6 +77,9 @@ class Motion:
         # write the list into logger
         self.logger.info("Behaviors on the robot:")
         self.logger.info(str(behaviorList))
+
+    def isMoving(self):
+        return self.motion.moveIsActive()
 
     def getRunningBehaviors(self):
         ###
@@ -117,6 +126,10 @@ class Motion:
         # change the body balancer to false
         self.motion.wbEnable(False)
 
+    def wakeUp(self):
+        self.motion.wakeUp()
+
+
     def standUp(self):
         ###
         # Summary: the robot will stand up
@@ -124,7 +137,6 @@ class Motion:
         # Return: --
         ###
         # execute the method wakeup that make Nao to stand up
-        self.motion.wakeUp()
         # take Nao from waking up posture to the indicated StandInit posture
         self.posture.goToPosture("Stand", 0.5)
 
@@ -147,6 +159,7 @@ class Motion:
         self.logger.info("Starting to walk to: " + str(x) + "," + str(y) + " with " + str(theta))
         # Nao will move till position (x,y) with an angle theta
         self.motion.moveTo(x, y, theta)
+
 
     def turnHead(self, degree, time):
         ###
@@ -250,6 +263,7 @@ class Motion:
         ###
         # set the velocity of Nao till one point in the space
         self.motion.setWalkTargetVelocity(x, y, theta, freq)
+    
 
     def stopEverything(self):
         ###
@@ -261,7 +275,11 @@ class Motion:
         self.logger.info("Stoping Movement")
         # stop any movement
         self.motion.stopMove()
-
+    
+    def crouch(self):
+        self.logger.info("Crouching")
+        self.posture.goToPosture("Crouch", 0.5)
+        
     def turnAround(self, degree):
         ###
         # Summary: Noa will turn around the degrees indicated in degree
@@ -355,7 +373,7 @@ class Motion:
         # Parameters: self
         # Return: --
         ###
-        self.run("bps_Kick")
+        self.run("kick_ball-afe65c/behavior_1")
 
     def rotateAroundBall(self, distance, angle):
         ###
