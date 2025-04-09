@@ -58,7 +58,7 @@ class Controller():
 
         self.tracker.registerTarget("RedBall", .06)
         #self.tracker.setMaximumDistanceDetection(2.0)
-        self.tracker.setTimeOut(3000)
+        self.tracker.setTimeOut(7000)
 
         X_axis_Distance = .01
         Y_axis_Distance = 0
@@ -365,7 +365,7 @@ class Controller():
         self.sensor.setCamera(1) 
         self.sensor.subscribeToLandmarks()
         # pitch head
-        self.motion.pitchHead(-30, 0.5)
+        self.motion.pitchHead(-5, 0.5)
         
         #Looking for the goal straight ahead
         time.sleep(self.retardSecond) 
@@ -383,12 +383,14 @@ class Controller():
         if(self.rotations != 11):
             # moving head
             self.motion.turnHead(0, 0.1)
-            self.motion.pitchHead(15, 0.4)
+            self.motion.pitchHead(5, 0.4)
             
             # starting tracking
+            self.motion.turnHead(0, 0.1)
+            self.motion.pitchHead(1,.04)
             self.tracker.setMode("Head")
             self.tracker.track("RedBall")
-            time.sleep(1)
+            time.sleep(5)
             
             # calculate the position of the ball
             try:
@@ -452,12 +454,13 @@ class Controller():
             
             # moving head
             self.motion.turnHead(0, 0.1)
-            self.motion.pitchHead(15, 0.4)
+            self.motion.pitchHead(5, 0.4)
             
             # Nao says Aiming
             self.speech.say("Aiming!")
             
             # Nao starts head tracking
+            self.tracker.setMode("Move")
             self.tracker.track("RedBall")
             time.sleep(1)
             
@@ -471,12 +474,16 @@ class Controller():
                 exit()
             
             # stopping head tracking
-            self.sensor.stopHeadTracker()
+            self.tracker.stopTracker()
             
             # Nao moves to that position
             self.motion.moveTo(x-0.151,y-0.05, 0)
+            self.tracker.track("RedBall")
+            time.sleep(4)
+            self.tracker.stopTracker()
             # Nao kicks the ball
             self.motion.kickBall()
+            
         
             self.sensor.unSubscribeFromLandMarks()
             self.end()

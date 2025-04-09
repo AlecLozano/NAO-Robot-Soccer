@@ -373,6 +373,7 @@ class Motion:
         # Parameters: self
         # Return: --
         ###
+        self.standUp()
         self.run("kick_ball-afe65c/behavior_1")
 
     def rotateAroundBall(self, distance, angle):
